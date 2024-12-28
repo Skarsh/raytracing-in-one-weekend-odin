@@ -2,23 +2,29 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:math/rand"
 import "core:os"
 import "core:strings"
 import image "vendor:stb/image"
 
 Camera :: struct {
-	aspect_ratio:  f64, // Ratio of image_widht / image_height
-	image_width:   int, // Rendered image width in pixel count
-	image_height:  int, // Rendered image height in pixel count 
-	center:        Point3, // Camera center
-	pixel00_loc:   Point3, // Location of pixel (0, 0)
-	pixel_delta_u: Vec3, // Offset to pixel to the right
-	pixel_delta_v: Vec3, // Offset pixel below
+	aspect_ratio:        f64, // Ratio of image_widht / image_height
+	image_width:         int, // Rendered image width in pixel count
+	image_height:        int, // Rendered image height in pixel count 
+	center:              Point3, // Camera center
+	pixel00_loc:         Point3, // Location of pixel (0, 0)
+	pixel_delta_u:       Vec3, // Offset to pixel to the right
+	pixel_delta_v:       Vec3, // Offset pixel below
+	samples_per_pixel:   int, // Count of random samples for each pixel
+	pixel_samples_scale: f64, // Color scale factor for a sum of pixel samples
 }
 
 initialize :: proc(camera: ^Camera) {
 	aspect_ratio := camera.aspect_ratio
 	image_width := camera.image_width
+
+	camera.pixel_samples_scale = f64(1.0) / f64(camera.samples_per_pixel)
+	fmt.println("pixel_samples_scale", camera.pixel_samples_scale)
 
 	// Calculate the image height, and ensure it's at least 1.
 	image_height := int(f64(image_width) / aspect_ratio)
@@ -68,17 +74,14 @@ render :: proc(camera: ^Camera, world: Hittable_List) {
 
 		for i in 0 ..< camera.image_width {
 
-			pixel_center :=
-				camera.pixel00_loc +
-				(f64(i) * camera.pixel_delta_u) +
-				(f64(j) * camera.pixel_delta_v)
-			ray_direction := pixel_center - camera.center
-			ray := Ray{camera.center, ray_direction}
-
-			pixel_color := ray_color(ray, world)
+			pixel_color := Color{0, 0, 0}
+			for sample in 0 ..< camera.samples_per_pixel {
+				ray := get_ray(camera^, i, j)
+				pixel_color += ray_color(ray, world)
+			}
 
 			index := (j * camera.image_width + i) * 3
-			write_color(data, index, pixel_color)
+			write_color(data, index, camera.pixel_samples_scale * pixel_color)
 		}
 	}
 	fmt.eprintln("\rProgress: 100.0%")
@@ -101,6 +104,25 @@ render :: proc(camera: ^Camera, world: Hittable_List) {
 	fmt.printfln("Image successfully written to '%v'", image_name)
 }
 
+get_ray :: proc(camera: Camera, i: int, j: int) -> Ray {
+	// Construct a camera ray originating from the origin and directed at randomly sampled
+	// point around the pixel location (i, j)
+	offset := sample_square()
+	pixel_sample :=
+		camera.pixel00_loc +
+		((f64(i) + offset.x) * camera.pixel_delta_u) +
+		((f64(j) + offset.y) * camera.pixel_delta_v)
+
+	ray_origin := camera.center
+	ray_direction := pixel_sample - ray_origin
+
+	return Ray{ray_origin, ray_direction}
+}
+
+sample_square :: proc() -> Vec3 {
+	// Returns the vector to a random point in the [-0.5, -0.5] - [0.5, 0.5] unit square
+	return Vec3{rand.float64() - 0.5, rand.float64() - 0.5, 0}
+}
 
 ray_color :: proc(ray: Ray, world: Hittable_List) -> Color {
 	rec := Hit_Record{}
@@ -119,7 +141,8 @@ write_color :: proc(buffer: []byte, index: int, pixel_color: Color) {
 	b := pixel_color.b
 
 	// Translate the [0, 1] component values to the byte range [0, 255]
-	buffer[index + 0] = byte(255.999 * r)
-	buffer[index + 1] = byte(255.999 * g)
-	buffer[index + 2] = byte(255.999 * b)
+	intensity :: Interval{0.000, 0.999}
+	buffer[index + 0] = byte(256 * interval_clamp(intensity, r))
+	buffer[index + 1] = byte(256 * interval_clamp(intensity, g))
+	buffer[index + 2] = byte(256 * interval_clamp(intensity, b))
 }

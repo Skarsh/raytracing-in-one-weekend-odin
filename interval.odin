@@ -19,5 +19,17 @@ interval_surrounds :: proc(interval: Interval, x: f64) -> bool {
 	return interval.min < x && x < interval.max
 }
 
+interval_clamp :: proc(interval: Interval, x: f64) -> f64 {
+	if x < interval.min {
+		return interval.min
+	}
+
+	if x > interval.max {
+		return interval.max
+	}
+
+	return x
+}
+
 EMPTY_INTERVAL :: Interval{math.INF_F64, math.NEG_INF_F64}
 UNIVERSE_INTERVAL :: Interval{math.NEG_INF_F64, math.INF_F64}

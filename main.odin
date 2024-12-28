@@ -23,8 +23,11 @@ main :: proc() {
 	aspect_ratio := 16.0 / 9.0
 	cam.aspect_ratio = aspect_ratio
 
-	image_width := 3072
+	image_width := 400
 	cam.image_width = image_width
+
+	samples_per_pixel := 100
+	cam.samples_per_pixel = samples_per_pixel
 
 	render(&cam, world)
 
