@@ -1,15 +1,17 @@
 package main
 
+import "core:fmt"
 import "core:math"
 import lg "core:math/linalg"
 
 Sphere :: struct {
 	center: Point3,
 	radius: f64,
+	mat:    Material,
 }
 
-make_sphere :: proc(center: Point3, radius: f64) -> Sphere {
-	return Sphere{center, math.max(0, radius)}
+make_sphere :: proc(center: Point3, radius: f64, material: Material) -> Sphere {
+	return Sphere{center, math.max(0, radius), material}
 }
 
 sphere_hit :: proc(sphere: Sphere, ray: Ray, ray_t: Interval, hit_record: ^Hit_Record) -> bool {
@@ -37,6 +39,7 @@ sphere_hit :: proc(sphere: Sphere, ray: Ray, ray_t: Interval, hit_record: ^Hit_R
 	hit_record.point = at(ray, hit_record.t)
 	outward_normal := (hit_record.point - sphere.center) / sphere.radius
 	set_face_normal(hit_record, ray, outward_normal)
+	hit_record.mat = sphere.mat
 
 	return true
 }

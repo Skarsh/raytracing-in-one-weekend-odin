@@ -34,6 +34,10 @@ random_on_hemisphere :: proc(normal: Vec3) -> Vec3 {
 	}
 }
 
+reflect :: proc(v: Vec3, n: Vec3) -> Vec3 {
+	return v - 2 * lg.dot(v, n) * n
+}
+
 random_vec3 :: proc() -> Vec3 {
 	return Vec3{rand.float64(), rand.float64(), rand.float64()}
 }
@@ -44,4 +48,9 @@ random_vec3_range :: proc(min: f64, max: f64) -> Vec3 {
 		rand.float64_range(min, max),
 		rand.float64_range(min, max),
 	}
+}
+
+near_zero :: proc(vec: Vec3) -> bool {
+	s := 1e-8
+	return math.abs(vec.x) < s && math.abs(vec.y) < s && math.abs(vec.z) < s
 }

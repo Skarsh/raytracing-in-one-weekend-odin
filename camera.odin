@@ -134,8 +134,12 @@ ray_color :: proc(ray: Ray, depth: int, world: Hittable_List) -> Color {
 	rec := Hit_Record{}
 
 	if hit(world, ray, Interval{0.001, math.INF_F64}, &rec) {
-		direction := rec.normal + random_unit_vector()
-		return 0.5 * ray_color(Ray{rec.point, direction}, depth - 1, world)
+		scattered := Ray{}
+		attenuation := Color{}
+		if scatter(&rec.mat, ray, rec, &attenuation, &scattered) {
+			return attenuation * ray_color(scattered, depth - 1, world)
+		}
+		return Color{0, 0, 0}
 	}
 
 	unit_direction := unit_vector(ray.dir)

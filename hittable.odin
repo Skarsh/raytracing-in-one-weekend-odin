@@ -5,6 +5,8 @@ import lg "core:math/linalg"
 Hit_Record :: struct {
 	point:      Point3,
 	normal:     Vec3,
+	// TODO(Thomas): Make the material a pointer / handle?
+	mat:        Material,
 	t:          f64,
 	front_face: bool,
 }
@@ -16,13 +18,6 @@ set_face_normal :: proc(hit_record: ^Hit_Record, ray: Ray, outward_normal: Vec3)
 	hit_record.normal = hit_record.front_face ? outward_normal : -outward_normal
 }
 
-set_hit_record :: proc(original: ^Hit_Record, hit_record: Hit_Record) {
-	original.point = hit_record.point
-	original.normal = hit_record.normal
-	original.t = hit_record.t
-	original.front_face = hit_record.front_face
-}
-
 Hittable :: union {
 	Sphere,
 }
@@ -30,7 +25,6 @@ Hittable :: union {
 Hittable_List :: struct {
 	objects: [dynamic]Hittable,
 }
-
 
 hit :: proc(
 	hittables_list: Hittable_List,
@@ -49,7 +43,7 @@ hit :: proc(
 			if sphere_hit(ty, ray, Interval{ray_t.min, closest_so_far}, &temp_rec) {
 				hit_anything = true
 				closest_so_far = temp_rec.t
-				set_hit_record(hit_record, temp_rec)
+				hit_record^ = temp_rec
 			}
 		}
 	}
