@@ -1,0 +1,47 @@
+package main
+
+import "core:math"
+import lg "core:math/linalg"
+import "core:math/rand"
+
+Vec3 :: lg.Vector3f64
+Color :: lg.Vector3f64
+Point3 :: lg.Vector3f64
+
+unit_vector :: proc(v: Vec3) -> Vec3 {
+	return lg.normalize(v)
+}
+
+random_unit_vector :: proc() -> Vec3 {
+	for {
+		p := random_vec3_range(-1, 1)
+		lensq := lg.length2(p)
+		// NOTE(Thomas): 1e-160 works here due to the precision
+		// from using 64-bit floats
+		if 1e-160 < lensq && lensq <= 1 {
+			return p / math.sqrt(lensq)
+		}
+	}
+}
+
+random_on_hemisphere :: proc(normal: Vec3) -> Vec3 {
+	on_unit_sphere := random_unit_vector()
+	if lg.dot(on_unit_sphere, normal) > 0.0 {
+		// In the same hemisphere as the normal
+		return on_unit_sphere
+	} else {
+		return -on_unit_sphere
+	}
+}
+
+random_vec3 :: proc() -> Vec3 {
+	return Vec3{rand.float64(), rand.float64(), rand.float64()}
+}
+
+random_vec3_range :: proc(min: f64, max: f64) -> Vec3 {
+	return Vec3 {
+		rand.float64_range(min, max),
+		rand.float64_range(min, max),
+		rand.float64_range(min, max),
+	}
+}

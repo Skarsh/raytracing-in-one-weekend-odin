@@ -17,6 +17,7 @@ Camera :: struct {
 	pixel_delta_v:       Vec3, // Offset pixel below
 	samples_per_pixel:   int, // Count of random samples for each pixel
 	pixel_samples_scale: f64, // Color scale factor for a sum of pixel samples
+	max_depth:           int, // Maximum number of ray bounces into the scene
 }
 
 initialize :: proc(camera: ^Camera) {
@@ -77,7 +78,7 @@ render :: proc(camera: ^Camera, world: Hittable_List) {
 			pixel_color := Color{0, 0, 0}
 			for sample in 0 ..< camera.samples_per_pixel {
 				ray := get_ray(camera^, i, j)
-				pixel_color += ray_color(ray, world)
+				pixel_color += ray_color(ray, camera.max_depth, world)
 			}
 
 			index := (j * camera.image_width + i) * 3
@@ -124,10 +125,17 @@ sample_square :: proc() -> Vec3 {
 	return Vec3{rand.float64() - 0.5, rand.float64() - 0.5, 0}
 }
 
-ray_color :: proc(ray: Ray, world: Hittable_List) -> Color {
+ray_color :: proc(ray: Ray, depth: int, world: Hittable_List) -> Color {
+	// If we've exceeded the ray bounce limit, no more light is gathered
+	if depth <= 0 {
+		return Color{0, 0, 0}
+	}
+
 	rec := Hit_Record{}
-	if hit(world, ray, Interval{0, math.INF_F64}, &rec) {
-		return 0.5 * (rec.normal + Color{1, 1, 1})
+
+	if hit(world, ray, Interval{0.001, math.INF_F64}, &rec) {
+		direction := rec.normal + random_unit_vector()
+		return 0.5 * ray_color(Ray{rec.point, direction}, depth - 1, world)
 	}
 
 	unit_direction := unit_vector(ray.dir)
@@ -140,9 +148,22 @@ write_color :: proc(buffer: []byte, index: int, pixel_color: Color) {
 	g := pixel_color.g
 	b := pixel_color.b
 
+	// Apply a linear to gamma transform  for gamma 2
+	r = linear_to_gamma(r)
+	g = linear_to_gamma(g)
+	b = linear_to_gamma(b)
+
 	// Translate the [0, 1] component values to the byte range [0, 255]
 	intensity :: Interval{0.000, 0.999}
 	buffer[index + 0] = byte(256 * interval_clamp(intensity, r))
 	buffer[index + 1] = byte(256 * interval_clamp(intensity, g))
 	buffer[index + 2] = byte(256 * interval_clamp(intensity, b))
+}
+
+linear_to_gamma :: proc(linear_component: f64) -> f64 {
+	if linear_component > 0 {
+		return math.sqrt(linear_component)
+	}
+
+	return 0
 }

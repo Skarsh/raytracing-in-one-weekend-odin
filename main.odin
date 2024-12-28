@@ -1,15 +1,5 @@
 package main
 
-import lg "core:math/linalg"
-
-Vec3 :: lg.Vector3f64
-Color :: lg.Vector3f64
-Point3 :: lg.Vector3f64
-
-unit_vector :: proc(v: Vec3) -> Vec3 {
-	return lg.normalize(v)
-}
-
 main :: proc() {
 
 	// World
@@ -28,6 +18,9 @@ main :: proc() {
 
 	samples_per_pixel := 100
 	cam.samples_per_pixel = samples_per_pixel
+
+	max_depth := 50
+	cam.max_depth = max_depth
 
 	render(&cam, world)
 
