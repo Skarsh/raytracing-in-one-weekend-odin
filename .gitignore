@@ -4,3 +4,9 @@
 
 # Debug
 *.pdb
+
+# Image
+*.png
+*.ppm
+*.jpeg
+*.jpg
