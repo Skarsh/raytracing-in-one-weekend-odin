@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import lg "core:math/linalg"
 

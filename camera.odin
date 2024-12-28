@@ -76,7 +76,7 @@ render :: proc(camera: ^Camera, world: Hittable_List) {
 		for i in 0 ..< camera.image_width {
 
 			pixel_color := Color{0, 0, 0}
-			for sample in 0 ..< camera.samples_per_pixel {
+			for _ in 0 ..< camera.samples_per_pixel {
 				ray := get_ray(camera^, i, j)
 				pixel_color += ray_color(ray, camera.max_depth, world)
 			}
