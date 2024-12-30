@@ -26,6 +26,10 @@ Camera :: struct {
 	u:                   Vec3, // Unit vector pointing in camera right direction
 	v:                   Vec3, // Basis vector pointing in camera up direction
 	w:                   Vec3, // Basis vector pointing in the opposite view direction
+	defocus_angle:       f64, // Variation angle of rays through each pixel
+	focus_dist:          f64, // Distance from camerea look_from point to plane of perfect focus
+	defocus_disk_u:      Vec3, // Defocus disk horizontal radius
+	defocus_disk_v:      Vec3, // Defocus disk vertical radius
 }
 
 initialize :: proc(camera: ^Camera) {
@@ -44,10 +48,9 @@ initialize :: proc(camera: ^Camera) {
 	camera.center = center
 
 	// Determine viewport dimensions
-	focal_length := lg.length(camera.look_from - camera.look_at)
 	thetha := math.to_radians(camera.v_fov)
 	h := math.tan(thetha / 2)
-	viewport_height := 2 * h * focal_length
+	viewport_height := 2 * h * camera.focus_dist
 	viewport_width := viewport_height * (f64(image_width) / f64(image_height))
 
 	// Calculate the u,v,w unit basis vectors for the camera coordinate frame
@@ -66,11 +69,17 @@ initialize :: proc(camera: ^Camera) {
 	camera.pixel_delta_v = pixel_delta_v
 
 	// Calculate the location of the upper left pixel
-	viewport_upper_left := center - (focal_length * camera.w) - viewport_u / 2 - viewport_v / 2
+	viewport_upper_left :=
+		center - (camera.focus_dist * camera.w) - viewport_u / 2 - viewport_v / 2
 
 	pixel00_loc := viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
 	camera.pixel00_loc = pixel00_loc
+
+	// Calculate the camera defocus disk basis vectors
+	defocus_radius := camera.focus_dist * math.tan(math.to_radians(camera.defocus_angle / 2))
+	camera.defocus_disk_u = camera.u * defocus_radius
+	camera.defocus_disk_v = camera.v * defocus_radius
 }
 
 
@@ -121,7 +130,7 @@ render :: proc(camera: ^Camera, world: Hittable_List) {
 }
 
 get_ray :: proc(camera: Camera, i: int, j: int) -> Ray {
-	// Construct a camera ray originating from the origin and directed at randomly sampled
+	// Construct a camera ray originating from the defocus disk and directed at randomly sampled
 	// point around the pixel location (i, j)
 	offset := sample_square()
 	pixel_sample :=
@@ -129,7 +138,7 @@ get_ray :: proc(camera: Camera, i: int, j: int) -> Ray {
 		((f64(i) + offset.x) * camera.pixel_delta_u) +
 		((f64(j) + offset.y) * camera.pixel_delta_v)
 
-	ray_origin := camera.center
+	ray_origin := (camera.defocus_angle <= 0) ? camera.center : defocus_disk_sample(camera)
 	ray_direction := pixel_sample - ray_origin
 
 	return Ray{ray_origin, ray_direction}
@@ -138,6 +147,12 @@ get_ray :: proc(camera: Camera, i: int, j: int) -> Ray {
 sample_square :: proc() -> Vec3 {
 	// Returns the vector to a random point in the [-0.5, -0.5] - [0.5, 0.5] unit square
 	return Vec3{rand.float64() - 0.5, rand.float64() - 0.5, 0}
+}
+
+defocus_disk_sample :: proc(camera: Camera) -> Point3 {
+	// Returns a random point in the camera defocus disk
+	p := random_in_unit_disk()
+	return camera.center + (p.x * camera.defocus_disk_u) + (p.y * camera.defocus_disk_v)
 }
 
 ray_color :: proc(ray: Ray, depth: int, world: Hittable_List) -> Color {

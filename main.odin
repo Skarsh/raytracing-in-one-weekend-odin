@@ -33,7 +33,7 @@ main :: proc() {
 	max_depth := 50
 	cam.max_depth = max_depth
 
-	v_fov := 90.0
+	v_fov := 20.0
 	cam.v_fov = v_fov
 
 	look_from := Point3{-2, 2, 1}
@@ -42,6 +42,11 @@ main :: proc() {
 	cam.look_at = look_at
 	v_up := Vec3{0, 1, 0}
 	cam.v_up = v_up
+
+	defocus_angle := 10.0
+	cam.defocus_angle = defocus_angle
+	focus_dist := 3.4
+	cam.focus_dist = focus_dist
 
 	render(&cam, world)
 }

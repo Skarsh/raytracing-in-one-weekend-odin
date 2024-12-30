@@ -12,6 +12,16 @@ unit_vector :: proc(v: Vec3) -> Vec3 {
 	return lg.normalize(v)
 }
 
+random_in_unit_disk :: proc() -> Vec3 {
+	for {
+		p := Vec3{rand.float64_range(-1, 1), rand.float64_range(-1, 1), 0}
+		if lg.length2(p) < 1 {
+			return p
+		}
+	}
+
+}
+
 random_unit_vector :: proc() -> Vec3 {
 	for {
 		p := random_vec3_range(-1, 1)
