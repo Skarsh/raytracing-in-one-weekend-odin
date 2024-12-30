@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import lg "core:math/linalg"
 import "core:math/rand"
 import "core:os"
 import "core:strings"
@@ -18,6 +19,13 @@ Camera :: struct {
 	samples_per_pixel:   int, // Count of random samples for each pixel
 	pixel_samples_scale: f64, // Color scale factor for a sum of pixel samples
 	max_depth:           int, // Maximum number of ray bounces into the scene
+	v_fov:               f64, // Vertical view angle (field of view)
+	look_from:           Point3, // Point the camera is looking from
+	look_at:             Point3, // Point the camera is looking to
+	v_up:                Vec3, // Camera-relative "up" direction
+	u:                   Vec3, // Unit vector pointing in camera right direction
+	v:                   Vec3, // Basis vector pointing in camera up direction
+	w:                   Vec3, // Basis vector pointing in the opposite view direction
 }
 
 initialize :: proc(camera: ^Camera) {
@@ -32,17 +40,24 @@ initialize :: proc(camera: ^Camera) {
 	image_height = (image_height < 1) ? 1 : image_height
 	camera.image_height = image_height
 
-	center := Point3{0, 0, 0}
+	center := camera.look_from
 	camera.center = center
 
 	// Determine viewport dimensions
-	focal_length := 1.0
-	viewport_height := 2.0
+	focal_length := lg.length(camera.look_from - camera.look_at)
+	thetha := math.to_radians(camera.v_fov)
+	h := math.tan(thetha / 2)
+	viewport_height := 2 * h * focal_length
 	viewport_width := viewport_height * (f64(image_width) / f64(image_height))
 
+	// Calculate the u,v,w unit basis vectors for the camera coordinate frame
+	camera.w = unit_vector(camera.look_from - camera.look_at)
+	camera.u = unit_vector(lg.cross(camera.v_up, camera.w))
+	camera.v = lg.cross(camera.w, camera.u)
+
 	// Calculate the vectors across the horizontal and down the vertical viewport edges
-	viewport_u := Vec3{viewport_width, 0, 0}
-	viewport_v := Vec3{0, -viewport_height, 0}
+	viewport_u := viewport_width * camera.u // Vector across viewport horizontal edge
+	viewport_v := viewport_height * -camera.v // Vector down viewport vertical edge
 
 	// Calculate the horizontal and vertical delta vectors from pixel to pixel
 	pixel_delta_u := viewport_u / f64(image_width)
@@ -51,7 +66,7 @@ initialize :: proc(camera: ^Camera) {
 	camera.pixel_delta_v = pixel_delta_v
 
 	// Calculate the location of the upper left pixel
-	viewport_upper_left := center - Vec3{0, 0, focal_length} - viewport_u / 2 - viewport_v / 2
+	viewport_upper_left := center - (focal_length * camera.w) - viewport_u / 2 - viewport_v / 2
 
 	pixel00_loc := viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
